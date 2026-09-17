@@ -199,10 +199,37 @@ jobs:
             exit 1
           fi
 
-      - name: Get YouTube Version 
+            - name: Get YouTube Version
         run: |
           unzip -q youtube.ipa -d ytextracted
           echo "YT_VERSION=$(grep -A 1 '<key>CFBundleVersion</key>' ytextracted/Payload/YouTube.app/Info.plist | grep '<string>' | awk -F'[><]' '{print $3}')" >> $GITHUB_ENV
+
+      - name: Normalize IPA archive
+        run: |
+          echo "Repacking IPA into a standard ZIP structure..."
+
+          rm -rf ipa_normalized
+          mkdir ipa_normalized
+
+          unzip -q youtube.ipa -d ipa_normalized
+
+          if [ ! -d "ipa_normalized/Payload/YouTube.app" ]; then
+            echo "::error::Payload/YouTube.app was not found after extraction"
+            find ipa_normalized -maxdepth 3 -type d | head -50
+            exit 1
+          fi
+
+          rm youtube.ipa
+
+          cd ipa_normalized
+          zip -qry -y ../youtube.ipa Payload
+          cd ..
+
+          unzip -tq youtube.ipa
+          unzip -Z1 youtube.ipa | head -20
+
+      - name: Install cyan
+        run: pipx install --force https://github.com/asdfzxcvbn/pyzule-rw/archive/main.zip
 
       - name: Determines the Release Title Prefix
         run: |
